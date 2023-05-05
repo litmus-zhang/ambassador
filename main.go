@@ -8,10 +8,12 @@ import (
 	"log"
 )
 
-const PORT = ":8100"
+const PORT = ":8000"
 
 func main() {
 	database.Connect()
+	database.SetupRedis()
+	database.SetupCacheChannel()
 	database.AutoMigrate()
 	app := fiber.New()
 

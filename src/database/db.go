@@ -4,7 +4,6 @@ import (
 	"ambassador-app/src/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
 )
 
 var DBConn *gorm.DB
@@ -19,8 +18,14 @@ func Connect() {
 }
 
 func AutoMigrate() {
-	if err := DBConn.Error; err != nil {
-		log.Fatalf("Error %v", err)
+
+	result := DBConn.AutoMigrate(models.User{},
+		models.Product{},
+		models.Link{},
+		models.Order{},
+		models.OrderItem{})
+	if result != nil {
+		panic(result.Error())
 	}
-	DBConn.AutoMigrate(models.User{}, models.Product{})
+
 }

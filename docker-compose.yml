@@ -12,3 +12,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ambassador
+  redis:
+    image: redis
+    ports:
+      - "2000:6379"

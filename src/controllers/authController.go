@@ -4,9 +4,8 @@ import (
 	"ambassador-app/src/database"
 	"ambassador-app/src/middleware"
 	"ambassador-app/src/models"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,12 +23,20 @@ func Register(c *fiber.Ctx) error {
 			"Message": "Password do not match",
 		})
 	}
+	query := database.DBConn.Where("email =?", data["email"]).Find(&models.User{})
+
+	if query.Error != nil {
+		return c.JSON(fiber.Map{
+			"message": "Email already in use",
+			"err":     query.Error.Error(),
+		})
+	}
 
 	user := models.User{
 		FirstName:    data["firstname"],
 		Lastname:     data["lastname"],
 		Email:        data["email"],
-		IsAmbassador: false,
+		IsAmbassador: strings.Contains(c.Path(), "/api/ambassador"),
 	}
 	user.SetPassword(data["password"])
 
@@ -59,11 +66,20 @@ func Login(c *fiber.Ctx) error {
 			"message": "invalid credentials",
 		})
 	}
-	var payload = jwt.StandardClaims{
-		Subject:   strconv.Itoa(int(user.Id)),
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	isAmbassador := strings.Contains(c.Path(), "/api/ambassador")
+	var scope string
+	if isAmbassador {
+		scope = "ambassador"
+	} else {
+		scope = "admin"
 	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, payload).SignedString([]byte("secret"))
+
+	if !isAmbassador && user.IsAmbassador {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+	token, err := middleware.GenerateJWT(user.Id, scope)
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
@@ -86,6 +102,12 @@ func User(c *fiber.Ctx) error {
 	id, _ := middleware.GetUserId(c)
 	var user models.User
 	database.DBConn.Where("id = ?", id).First(&user)
+
+	if strings.Contains(c.Path(), "/api/ambassador") {
+		ambassador := models.Ambassador(user)
+		ambassador.CalculateRevenue(database.DBConn)
+		return c.JSON(ambassador)
+	}
 	return c.JSON(user)
 
 }
