@@ -20,7 +20,9 @@ func (user *User) SetPassword(password string) {
 	user.Password = string(hashpassword)
 
 }
-
+func (user User) Name() string {
+	return user.FirstName + " " + user.Lastname
+}
 func (user User) ComparePassword(password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 

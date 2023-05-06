@@ -62,9 +62,9 @@ func DeleteProduct(c *fiber.Ctx) error {
 		return err
 	}
 	database.DBConn.Delete(&product)
-	return c.JSON(fiber.Map{
-		"message": "Object deleted success",
-	})
+
+	go database.ClearCache("products_backend", "products_frontend")
+	return nil
 }
 func ProductsFrontend(c *fiber.Ctx) error {
 	var products []models.Product
